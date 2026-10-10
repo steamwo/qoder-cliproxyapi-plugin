@@ -77,7 +77,7 @@ func handleMethod(method string, request []byte) ([]byte, error) {
 	case methodAuthLoginStart:
 		return startLogin(request)
 	case methodAuthLoginPoll:
-		return pollLogin(request)
+		return pollLoginV3(request)
 	case methodAuthRefresh:
 		return refreshAuth(request)
 	case methodModelStatic:
@@ -103,7 +103,7 @@ func pluginRegistration() registration {
 	return registration{
 		SchemaVersion: schemaVersion,
 		Metadata: metadata{
-			Name: "Qoder", Version: "0.0.2", Author: "steamwo",
+			Name: "Qoder", Version: "0.0.3", Author: "steamwo",
 			GitHubRepository: "https://github.com/steamwo/qoder-cliproxyapi-plugin",
 			ConfigFields: []configField{
 				{Name: "enabled", Type: "boolean", Description: "Enable the Qoder provider."},
