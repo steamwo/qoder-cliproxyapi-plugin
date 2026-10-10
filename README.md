@@ -13,6 +13,7 @@ A native CLIProxyAPI provider plugin that uses a Qoder account directly inside C
 - Qoder free-plan queue retry with SSE heartbeat comments
 - Qoder business error to CPA HTTP status mapping
 - CPA host HTTP bridge for all upstream traffic, preserving CPA proxy/request-log policy
+- Plugin-owned Qoder management panel with live plan/credit usage and manual refresh
 
 CPA can translate other supported frontend protocols to/from `chat-completions` before and after the plugin executor.
 
@@ -74,6 +75,14 @@ Use CPA's plugin/provider login flow for provider `qoder`. The plugin starts Qod
 
 Existing `qoder-proxy` credential JSON can also be recognized when imported as a Qoder auth file.
 
+## Credits panel
+
+The plugin exposes CPA's `ManagementAPI` capability and registers a browser resource named **Qoder**. The panel reads Qoder credentials through CPA's `host.auth.list` / `host.auth.get` callbacks and fetches the live Qoder usage endpoint through CPA's host HTTP bridge.
+
+The panel shows plan information, remaining/used/total credits, per-package percentages, and reset/expiry times. The **刷新额度 / Refresh** button reloads the resource and performs a fresh upstream usage query without exposing Qoder tokens to the browser.
+
+For compatibility, the old `quota.*` RPC handlers remain in the binary, but the plugin no longer advertises the generic `QuotaProvider` capability. This avoids routing Qoder through Management Center's generic `Plugin` quota tab; quota UI is owned by the plugin resource instead, following CPA's dynamic-plugin management pattern.
+
 ## Architecture
 
 ```text
@@ -85,6 +94,13 @@ client
   -> Qoder SSE parser
   -> CPA stream / response translator
   -> client
+
+CPA plugin resource
+  -> qoder management handler
+  -> CPA host.auth.list / host.auth.get
+  -> CPA host.http.do
+  -> Qoder /sash/api/v2/me/usage
+  -> Qoder credits panel
 ```
 
 All Qoder upstream traffic is executed by CPA's host HTTP bridge rather than a private `http.Transport`, so CPA's configured proxy and request logging remain in the path.
