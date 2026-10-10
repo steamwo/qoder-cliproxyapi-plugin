@@ -5,14 +5,14 @@ on:
     branches:
       - main
     paths:
-      - '.release-trigger/0.0.6'
+      - '.release-trigger/0.0.7'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 env:
-  VERSION: '0.0.6'
+  VERSION: '0.0.7'
 
 jobs:
   prepare:
@@ -30,7 +30,7 @@ jobs:
               --repo "${GITHUB_REPOSITORY}" \
               --target "${GITHUB_SHA}" \
               --title "v${VERSION}" \
-              --notes "Stabilize Qoder credential auth_index across login, persistence, and reload so CPA plugin quota refresh resolves the correct credential." \
+              --notes "Keep Qoder on CPA's native generic QuotaProvider path and allow quota.fetch to fall back to credential metadata when provider-owned storage is unavailable." \
               --draft
           fi
 
