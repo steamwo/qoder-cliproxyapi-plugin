@@ -28,6 +28,7 @@ const (
 	methodExecutorExecuteStream = "executor.execute_stream"
 	methodExecutorCountTokens   = "executor.count_tokens"
 	methodExecutorHTTPRequest   = "executor.http_request"
+	methodHostHTTPDo            = "host.http.do"
 	methodHostHTTPDoStream      = "host.http.do_stream"
 	methodHostHTTPStreamRead    = "host.http.stream_read"
 	methodHostHTTPStreamClose   = "host.http.stream_close"
@@ -259,6 +260,12 @@ type hostHTTPRequest struct {
 	Headers        http.Header      `json:"headers,omitempty"`
 	Body           []byte           `json:"body,omitempty"`
 	WireProfile    *httpWireProfile `json:"wire_profile,omitempty"`
+}
+
+type hostHTTPResponse struct {
+	StatusCode int
+	Headers    http.Header
+	Body       []byte
 }
 
 type hostHTTPStreamResponse struct {
