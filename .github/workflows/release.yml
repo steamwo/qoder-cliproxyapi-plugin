@@ -5,14 +5,14 @@ on:
     branches:
       - main
     paths:
-      - '.release-trigger/0.0.2'
+      - '.release-trigger/0.0.3'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 env:
-  VERSION: '0.0.2'
+  VERSION: '0.0.3'
 
 jobs:
   prepare:
@@ -30,7 +30,7 @@ jobs:
               --repo "${GITHUB_REPOSITORY}" \
               --target "${GITHUB_SHA}" \
               --title "v${VERSION}" \
-              --notes "Fix CPA OAuth state compatibility by keeping the short state token separate from Qoder login-session metadata." \
+              --notes "Fix Qoder authorization completion by replacing timeout-based polling with a single device-token poll that completes userinfo before returning success." \
               --draft
           fi
 
