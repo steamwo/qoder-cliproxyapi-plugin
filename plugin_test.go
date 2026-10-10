@@ -11,11 +11,14 @@ import (
 
 func TestRegistrationDeclaresProviderSurface(t *testing.T) {
 	r := pluginRegistration()
-	if r.SchemaVersion != schemaVersion || !r.Capabilities.AuthProvider || !r.Capabilities.ModelProvider || !r.Capabilities.Executor {
+	if r.SchemaVersion != schemaVersion || !r.Capabilities.AuthProvider || !r.Capabilities.ModelProvider || !r.Capabilities.Executor || !r.Capabilities.QuotaProvider {
 		t.Fatalf("unexpected registration: %#v", r)
 	}
 	if len(r.Capabilities.ExecutorInputFormats) != 1 || r.Capabilities.ExecutorInputFormats[0] != "chat-completions" {
 		t.Fatalf("unexpected input formats: %#v", r.Capabilities.ExecutorInputFormats)
+	}
+	if r.Metadata.Logo != "https://avatars.githubusercontent.com/u/219277434?v=4" {
+		t.Fatalf("unexpected Qoder logo: %q", r.Metadata.Logo)
 	}
 }
 
