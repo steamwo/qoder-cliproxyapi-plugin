@@ -115,12 +115,34 @@ func describeQuota(_ []byte) ([]byte, error) {
 	})
 }
 
+func credentialFromQuotaRequest(req quotaFetchRequest) (credential.Credential, error) {
+	var storageErr error
+	if len(req.StorageJSON) > 0 {
+		cred, err := credentialFromStorage(req.StorageJSON)
+		if err == nil {
+			return cred, nil
+		}
+		storageErr = err
+	}
+
+	// CPA normally backfills StorageJSON from auth_index before invoking the
+	// quota provider. Keep a metadata fallback for management clients/host
+	// versions that provide credential metadata without provider-owned storage.
+	if token := quotaString(req.Metadata, "token", "access_token", "accessToken"); token != "" {
+		return credential.Credential{Token: token}, nil
+	}
+	if storageErr != nil {
+		return credential.Credential{}, storageErr
+	}
+	return credential.Credential{}, fmt.Errorf("Qoder quota credential is missing access token")
+}
+
 func fetchQuota(raw []byte) ([]byte, error) {
 	var req quotaFetchRequest
 	if err := json.Unmarshal(raw, &req); err != nil {
 		return nil, err
 	}
-	cred, err := credentialFromStorage(req.StorageJSON)
+	cred, err := credentialFromQuotaRequest(req)
 	if err != nil {
 		return errorEnvelope("invalid_auth", err.Error(), http.StatusUnauthorized), nil
 	}
