@@ -71,8 +71,22 @@ func TestAuthDataCarriesRefreshMetadata(t *testing.T) {
 	if got, _ := a.Metadata["refresh_token"].(string); got != "refresh" {
 		t.Fatalf("refresh token metadata = %q", got)
 	}
+	if got := a.Attributes["auth_index_seed"]; got != "qoder:u-1" {
+		t.Fatalf("auth_index_seed = %q", got)
+	}
 	if a.NextRefreshAfter.IsZero() {
 		t.Fatal("next refresh was not scheduled")
+	}
+}
+
+func TestAuthIndexSeedFallsBackWithoutUserID(t *testing.T) {
+	cred := credential.Credential{Email: "user@example.com", MachineID: "m-1"}
+	if got := authIndexSeed(cred); got != "qoder:user@example.com" {
+		t.Fatalf("authIndexSeed() = %q", got)
+	}
+	cred.Email = ""
+	if got := authIndexSeed(cred); got != "qoder:m-1" {
+		t.Fatalf("authIndexSeed() machine fallback = %q", got)
 	}
 }
 

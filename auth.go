@@ -179,6 +179,20 @@ func credentialFromStorage(raw []byte) (credential.Credential, error) {
 	return cred, nil
 }
 
+func authIndexSeed(cred credential.Credential) string {
+	identity := strings.TrimSpace(cred.UserID)
+	if identity == "" {
+		identity = strings.TrimSpace(cred.Email)
+	}
+	if identity == "" {
+		identity = strings.TrimSpace(cred.MachineID)
+	}
+	if identity == "" {
+		return ""
+	}
+	return pluginID + ":" + identity
+}
+
 func authDataFromCredential(cred credential.Credential, fileName, authID string) authData {
 	storage, _ := json.Marshal(cred)
 	if strings.TrimSpace(fileName) == "" {
@@ -208,6 +222,10 @@ func authDataFromCredential(cred credential.Credential, fileName, authID string)
 	if label == "" {
 		label = "Qoder"
 	}
+	attributes := map[string]string{"auth_kind": "oauth"}
+	if seed := authIndexSeed(cred); seed != "" {
+		attributes["auth_index_seed"] = seed
+	}
 	next := nextRefreshTime(cred)
 	return authData{
 		Provider:    pluginID,
@@ -223,7 +241,7 @@ func authDataFromCredential(cred credential.Credential, fileName, authID string)
 			"refresh_token": cred.RefreshToken,
 			"expires_at":    cred.ExpiresAt,
 		},
-		Attributes:       map[string]string{"auth_kind": "oauth"},
+		Attributes:       attributes,
 		NextRefreshAfter: next,
 	}
 }
