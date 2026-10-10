@@ -4,12 +4,13 @@
     {
       "id": "qoder",
       "name": "Qoder",
-      "description": "Qoder provider plugin for CLIProxyAPI",
+      "description": "Qoder provider plugin for CLIProxyAPI with OAuth, models, chat completions, and native Credits quota refresh",
       "author": "steamwo",
-      "version": "0.0.4",
+      "version": "0.0.5",
       "repository": "https://github.com/steamwo/qoder-cliproxyapi-plugin",
       "homepage": "https://github.com/steamwo/qoder-cliproxyapi-plugin",
-      "tags": ["qoder", "provider", "oauth", "chat-completions"],
+      "logo": "https://avatars.githubusercontent.com/u/219277434?v=4",
+      "tags": ["qoder", "provider", "oauth", "quota", "credits", "chat-completions"],
       "install": {
         "type": "github-release"
       }
