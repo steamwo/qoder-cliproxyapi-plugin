@@ -111,7 +111,7 @@ func pluginRegistration() registration {
 	return registration{
 		SchemaVersion: schemaVersion,
 		Metadata: metadata{
-			Name: "Qoder", Version: "0.0.6", Author: "steamwo",
+			Name: "Qoder", Version: "0.0.7", Author: "steamwo",
 			GitHubRepository: "https://github.com/steamwo/qoder-cliproxyapi-plugin",
 			Logo:             "https://avatars.githubusercontent.com/u/219277434?v=4",
 			ConfigFields: []configField{
