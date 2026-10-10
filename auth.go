@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -14,6 +15,8 @@ import (
 	"github.com/steamwo/qoder-proxy/internal/credential"
 	"github.com/steamwo/qoder-proxy/internal/qoder"
 )
+
+const qoderLoginSessionMetadataKey = "qoder_login_session"
 
 func authIdentifier() ([]byte, error) {
 	return okEnvelope(map[string]string{"identifier": pluginID})
@@ -35,6 +38,47 @@ func parseAuth(raw []byte) ([]byte, error) {
 	return okEnvelope(authParseResponse{Handled: true, Auth: authDataFromCredential(cred, req.FileName, "")})
 }
 
+func newOAuthState() (string, error) {
+	buf := make([]byte, 24)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(buf), nil
+}
+
+func encodeLoginSession(session qoder.LoginSession) (string, error) {
+	raw, err := json.Marshal(session)
+	if err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(raw), nil
+}
+
+func decodeLoginSession(encoded string) (qoder.LoginSession, error) {
+	raw, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(encoded))
+	if err != nil {
+		return qoder.LoginSession{}, err
+	}
+	var session qoder.LoginSession
+	if err := json.Unmarshal(raw, &session); err != nil {
+		return qoder.LoginSession{}, err
+	}
+	if strings.TrimSpace(session.Verifier) == "" || strings.TrimSpace(session.Nonce) == "" || strings.TrimSpace(session.MachineID) == "" {
+		return qoder.LoginSession{}, fmt.Errorf("Qoder login session is incomplete")
+	}
+	return session, nil
+}
+
+func loginSessionFromPollRequest(req authLoginPollRequest) (qoder.LoginSession, error) {
+	if req.Metadata != nil {
+		if encoded, ok := req.Metadata[qoderLoginSessionMetadataKey].(string); ok && strings.TrimSpace(encoded) != "" {
+			return decodeLoginSession(encoded)
+		}
+	}
+	// Compatibility fallback for direct callers of the old plugin contract.
+	return decodeLoginSession(req.State)
+}
+
 func startLogin(raw []byte) ([]byte, error) {
 	var req authLoginStartRequest
 	if err := json.Unmarshal(raw, &req); err != nil {
@@ -44,12 +88,22 @@ func startLogin(raw []byte) ([]byte, error) {
 	if err != nil {
 		return errorEnvelope("login_start_failed", err.Error(), 500), nil
 	}
-	stateRaw, _ := json.Marshal(session)
+	state, err := newOAuthState()
+	if err != nil {
+		return errorEnvelope("login_start_failed", err.Error(), 500), nil
+	}
+	encodedSession, err := encodeLoginSession(session)
+	if err != nil {
+		return errorEnvelope("login_start_failed", err.Error(), 500), nil
+	}
 	return okEnvelope(authLoginStartResponse{
 		Provider:  pluginID,
 		URL:       session.URL,
-		State:     base64.RawURLEncoding.EncodeToString(stateRaw),
+		State:     state,
 		ExpiresAt: time.Now().Add(10 * time.Minute).UTC(),
+		Metadata: map[string]any{
+			qoderLoginSessionMetadataKey: encodedSession,
+		},
 	})
 }
 
@@ -58,12 +112,8 @@ func pollLogin(raw []byte) ([]byte, error) {
 	if err := json.Unmarshal(raw, &req); err != nil {
 		return nil, err
 	}
-	stateRaw, err := base64.RawURLEncoding.DecodeString(req.State)
+	session, err := loginSessionFromPollRequest(req)
 	if err != nil {
-		return errorEnvelope("invalid_login_state", "invalid Qoder login state", 400), nil
-	}
-	var session qoder.LoginSession
-	if err := json.Unmarshal(stateRaw, &session); err != nil {
 		return errorEnvelope("invalid_login_state", "invalid Qoder login state", 400), nil
 	}
 

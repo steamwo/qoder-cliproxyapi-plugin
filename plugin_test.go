@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -15,6 +16,43 @@ func TestRegistrationDeclaresProviderSurface(t *testing.T) {
 	}
 	if len(r.Capabilities.ExecutorInputFormats) != 1 || r.Capabilities.ExecutorInputFormats[0] != "chat-completions" {
 		t.Fatalf("unexpected input formats: %#v", r.Capabilities.ExecutorInputFormats)
+	}
+}
+
+func TestLoginStateIsCPACompatible(t *testing.T) {
+	raw, err := startLogin([]byte(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var env envelope
+	if err := json.Unmarshal(raw, &env); err != nil {
+		t.Fatal(err)
+	}
+	if !env.OK {
+		t.Fatalf("start login failed: %#v", env.Error)
+	}
+	var resp authLoginStartResponse
+	if err := json.Unmarshal(env.Result, &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.State == "" || len(resp.State) > 128 {
+		t.Fatalf("invalid CPA oauth state length: %d", len(resp.State))
+	}
+	for _, r := range resp.State {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.') {
+			t.Fatalf("invalid CPA oauth state character %q", r)
+		}
+	}
+	encoded, ok := resp.Metadata[qoderLoginSessionMetadataKey].(string)
+	if !ok || encoded == "" {
+		t.Fatal("Qoder login session metadata is missing")
+	}
+	session, err := decodeLoginSession(encoded)
+	if err != nil {
+		t.Fatalf("decode login session: %v", err)
+	}
+	if session.Verifier == "" || session.Nonce == "" || session.MachineID == "" || resp.URL == "" {
+		t.Fatalf("incomplete login session: %#v", session)
 	}
 }
 

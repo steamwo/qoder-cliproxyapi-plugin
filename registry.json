@@ -6,7 +6,7 @@
       "name": "Qoder",
       "description": "Qoder provider plugin for CLIProxyAPI",
       "author": "steamwo",
-      "version": "0.0.1",
+      "version": "0.0.2",
       "repository": "https://github.com/steamwo/qoder-cliproxyapi-plugin",
       "homepage": "https://github.com/steamwo/qoder-cliproxyapi-plugin",
       "tags": ["qoder", "provider", "oauth", "chat-completions"],
