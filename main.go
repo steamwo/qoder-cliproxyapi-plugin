@@ -94,6 +94,14 @@ func handleMethod(method string, request []byte) ([]byte, error) {
 		return countTokens(request)
 	case methodExecutorHTTPRequest:
 		return executorHTTPRequest(request)
+	case methodQuotaIdentifier:
+		return quotaIdentifier()
+	case methodQuotaDescribe:
+		return describeQuota(request)
+	case methodQuotaFetch:
+		return fetchQuota(request)
+	case methodQuotaReset:
+		return resetQuota(request)
 	default:
 		return errorEnvelope("unknown_method", "unknown method: "+method, 400), nil
 	}
@@ -103,8 +111,9 @@ func pluginRegistration() registration {
 	return registration{
 		SchemaVersion: schemaVersion,
 		Metadata: metadata{
-			Name: "Qoder", Version: "0.0.4", Author: "steamwo",
+			Name: "Qoder", Version: "0.0.5", Author: "steamwo",
 			GitHubRepository: "https://github.com/steamwo/qoder-cliproxyapi-plugin",
+			Logo:             "https://avatars.githubusercontent.com/u/219277434?v=4",
 			ConfigFields: []configField{
 				{Name: "enabled", Type: "boolean", Description: "Enable the Qoder provider."},
 				{Name: "queue_retries", Type: "integer", Description: "Maximum retries for Qoder free-plan queue responses."},
@@ -112,7 +121,7 @@ func pluginRegistration() registration {
 			},
 		},
 		Capabilities: registrationCapabilities{
-			ModelProvider: true, AuthProvider: true, Executor: true, ExecutorModelScope: "oauth",
+			ModelProvider: true, AuthProvider: true, Executor: true, QuotaProvider: true, ExecutorModelScope: "oauth",
 			ExecutorInputFormats: []string{"chat-completions"}, ExecutorOutputFormats: []string{"chat-completions"},
 		},
 	}
