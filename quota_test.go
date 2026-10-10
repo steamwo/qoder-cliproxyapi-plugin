@@ -6,6 +6,37 @@ import (
 	"testing"
 )
 
+func TestCredentialFromQuotaRequestFallsBackToMetadataToken(t *testing.T) {
+	cred, err := credentialFromQuotaRequest(quotaFetchRequest{
+		Metadata: map[string]any{"token": "metadata-access-token"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cred.Token != "metadata-access-token" {
+		t.Fatalf("token = %q", cred.Token)
+	}
+}
+
+func TestCredentialFromQuotaRequestFallsBackWhenStorageIsInvalid(t *testing.T) {
+	cred, err := credentialFromQuotaRequest(quotaFetchRequest{
+		StorageJSON: []byte(`{not-json`),
+		Metadata:    map[string]any{"access_token": "metadata-access-token"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cred.Token != "metadata-access-token" {
+		t.Fatalf("token = %q", cred.Token)
+	}
+}
+
+func TestCredentialFromQuotaRequestRejectsMissingToken(t *testing.T) {
+	if _, err := credentialFromQuotaRequest(quotaFetchRequest{}); err == nil {
+		t.Fatal("expected missing-token error")
+	}
+}
+
 func TestParseQoderUsage(t *testing.T) {
 	raw := []byte(`{
 		"displayMode":"qoder",
