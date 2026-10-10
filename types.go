@@ -28,12 +28,16 @@ const (
 	methodExecutorExecuteStream = "executor.execute_stream"
 	methodExecutorCountTokens   = "executor.count_tokens"
 	methodExecutorHTTPRequest   = "executor.http_request"
+	methodManagementRegister    = "management.register"
+	methodManagementHandle      = "management.handle"
 	methodHostHTTPDo            = "host.http.do"
 	methodHostHTTPDoStream      = "host.http.do_stream"
 	methodHostHTTPStreamRead    = "host.http.stream_read"
 	methodHostHTTPStreamClose   = "host.http.stream_close"
 	methodHostStreamEmit        = "host.stream.emit"
 	methodHostStreamClose       = "host.stream.close"
+	methodHostAuthList          = "host.auth.list"
+	methodHostAuthGet           = "host.auth.get"
 )
 
 type envelope struct {
@@ -80,6 +84,7 @@ type registrationCapabilities struct {
 	AuthProvider          bool     `json:"auth_provider"`
 	Executor              bool     `json:"executor"`
 	QuotaProvider         bool     `json:"quota_provider"`
+	ManagementAPI         bool     `json:"management_api"`
 	ExecutorModelScope    string   `json:"executor_model_scope"`
 	ExecutorInputFormats  []string `json:"executor_input_formats,omitempty"`
 	ExecutorOutputFormats []string `json:"executor_output_formats,omitempty"`
@@ -298,4 +303,69 @@ type hostStreamEmitRequest struct {
 type hostStreamCloseRequest struct {
 	StreamID string `json:"stream_id"`
 	Error    string `json:"error,omitempty"`
+}
+
+type managementRegistrationRequest struct {
+	Plugin           metadata `json:"plugin,omitempty"`
+	BasePath         string   `json:"base_path,omitempty"`
+	ResourceBasePath string   `json:"resource_base_path,omitempty"`
+}
+
+type managementRoute struct {
+	Method      string `json:"method"`
+	Path        string `json:"path"`
+	Description string `json:"description,omitempty"`
+}
+
+type managementResource struct {
+	Path        string `json:"path"`
+	Menu        string `json:"menu,omitempty"`
+	Description string `json:"description,omitempty"`
+}
+
+type managementRegistrationResponse struct {
+	Routes    []managementRoute    `json:"routes,omitempty"`
+	Resources []managementResource `json:"resources,omitempty"`
+}
+
+type managementRequest struct {
+	Method         string
+	Path           string
+	Headers        http.Header
+	Query          url.Values
+	Body           []byte
+	HostCallbackID string `json:"host_callback_id,omitempty"`
+}
+
+type managementResponse struct {
+	StatusCode int         `json:"StatusCode"`
+	Headers    http.Header `json:"Headers"`
+	Body       []byte      `json:"Body"`
+}
+
+type hostAuthFileEntry struct {
+	ID        string `json:"id,omitempty"`
+	AuthIndex string `json:"auth_index,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Type      string `json:"type,omitempty"`
+	Provider  string `json:"provider,omitempty"`
+	Email     string `json:"email,omitempty"`
+	Label     string `json:"label,omitempty"`
+	Status    string `json:"status,omitempty"`
+	Disabled  bool   `json:"disabled,omitempty"`
+}
+
+type hostAuthListResponse struct {
+	Files []hostAuthFileEntry `json:"files"`
+}
+
+type hostAuthGetRequest struct {
+	AuthIndex string `json:"auth_index"`
+}
+
+type hostAuthGetResponse struct {
+	AuthIndex string          `json:"auth_index"`
+	Name      string          `json:"name,omitempty"`
+	Path      string          `json:"path,omitempty"`
+	JSON      json.RawMessage `json:"json"`
 }
