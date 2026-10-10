@@ -68,25 +68,69 @@ func newHostHTTPClient(callbackID string) *http.Client {
 	return &http.Client{Transport: &hostTransport{callbackID: callbackID}}
 }
 
-func (t *hostTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	if req == nil || req.URL == nil {
-		return nil, fmt.Errorf("invalid HTTP request")
+func readRequestBody(req *http.Request) ([]byte, error) {
+	if req == nil || req.Body == nil {
+		return nil, nil
 	}
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		return nil, err
 	}
-	if req.Body != nil {
-		_ = req.Body.Close()
+	_ = req.Body.Close()
+	return body, nil
+}
+
+func useStreamingHostHTTP(req *http.Request) bool {
+	if req == nil {
+		return false
 	}
-	raw, err := callHost(methodHostHTTPDoStream, hostHTTPRequest{
+	accept := strings.ToLower(req.Header.Get("Accept"))
+	return strings.Contains(accept, "text/event-stream")
+}
+
+func (t *hostTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req == nil || req.URL == nil {
+		return nil, fmt.Errorf("invalid HTTP request")
+	}
+	body, err := readRequestBody(req)
+	if err != nil {
+		return nil, err
+	}
+	request := hostHTTPRequest{
 		HostCallbackID: t.callbackID,
 		Method:         req.Method,
 		URL:            req.URL.String(),
 		Headers:        req.Header.Clone(),
 		Body:           body,
 		WireProfile:    &httpWireProfile{DisableAutoCompression: true},
-	})
+	}
+	if useStreamingHostHTTP(req) {
+		return t.roundTripStream(req, request)
+	}
+	return t.roundTripBuffered(req, request)
+}
+
+func (t *hostTransport) roundTripBuffered(req *http.Request, request hostHTTPRequest) (*http.Response, error) {
+	raw, err := callHost(methodHostHTTPDo, request)
+	if err != nil {
+		return nil, err
+	}
+	var upstream hostHTTPResponse
+	if err := json.Unmarshal(raw, &upstream); err != nil {
+		return nil, err
+	}
+	return &http.Response{
+		StatusCode:    upstream.StatusCode,
+		Status:        fmt.Sprintf("%d %s", upstream.StatusCode, http.StatusText(upstream.StatusCode)),
+		Header:        upstream.Headers.Clone(),
+		Body:          io.NopCloser(bytes.NewReader(upstream.Body)),
+		ContentLength: int64(len(upstream.Body)),
+		Request:       req,
+	}, nil
+}
+
+func (t *hostTransport) roundTripStream(req *http.Request, request hostHTTPRequest) (*http.Response, error) {
+	raw, err := callHost(methodHostHTTPDoStream, request)
 	if err != nil {
 		return nil, err
 	}
