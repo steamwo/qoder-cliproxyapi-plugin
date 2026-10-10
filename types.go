@@ -79,6 +79,7 @@ type registrationCapabilities struct {
 	ModelProvider         bool     `json:"model_provider"`
 	AuthProvider          bool     `json:"auth_provider"`
 	Executor              bool     `json:"executor"`
+	QuotaProvider         bool     `json:"quota_provider"`
 	ExecutorModelScope    string   `json:"executor_model_scope"`
 	ExecutorInputFormats  []string `json:"executor_input_formats,omitempty"`
 	ExecutorOutputFormats []string `json:"executor_output_formats,omitempty"`
