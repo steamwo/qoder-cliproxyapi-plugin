@@ -94,6 +94,10 @@ func handleMethod(method string, request []byte) ([]byte, error) {
 		return countTokens(request)
 	case methodExecutorHTTPRequest:
 		return executorHTTPRequest(request)
+	case methodManagementRegister:
+		return registerManagement(request)
+	case methodManagementHandle:
+		return handleManagement(request)
 	case methodQuotaIdentifier:
 		return quotaIdentifier()
 	case methodQuotaDescribe:
@@ -121,7 +125,7 @@ func pluginRegistration() registration {
 			},
 		},
 		Capabilities: registrationCapabilities{
-			ModelProvider: true, AuthProvider: true, Executor: true, QuotaProvider: true, ExecutorModelScope: "oauth",
+			ModelProvider: true, AuthProvider: true, Executor: true, ManagementAPI: true, ExecutorModelScope: "oauth",
 			ExecutorInputFormats: []string{"chat-completions"}, ExecutorOutputFormats: []string{"chat-completions"},
 		},
 	}
