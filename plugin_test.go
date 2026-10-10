@@ -11,13 +11,16 @@ import (
 
 func TestRegistrationDeclaresProviderSurface(t *testing.T) {
 	r := pluginRegistration()
-	if r.SchemaVersion != schemaVersion || !r.Capabilities.AuthProvider || !r.Capabilities.ModelProvider || !r.Capabilities.Executor || !r.Capabilities.QuotaProvider {
+	if r.SchemaVersion != schemaVersion || !r.Capabilities.AuthProvider || !r.Capabilities.ModelProvider || !r.Capabilities.Executor || !r.Capabilities.ManagementAPI {
 		t.Fatalf("unexpected registration: %#v", r)
+	}
+	if r.Capabilities.QuotaProvider {
+		t.Fatal("generic quota provider must stay disabled; Qoder quota is exposed through the plugin management panel")
 	}
 	if len(r.Capabilities.ExecutorInputFormats) != 1 || r.Capabilities.ExecutorInputFormats[0] != "chat-completions" {
 		t.Fatalf("unexpected input formats: %#v", r.Capabilities.ExecutorInputFormats)
 	}
-	if r.Metadata.Logo != "https://avatars.githubusercontent.com/u/219277434?v=4" {
+	if r.Metadata.Logo != qoderOfficialLogoURL {
 		t.Fatalf("unexpected Qoder logo: %q", r.Metadata.Logo)
 	}
 }
