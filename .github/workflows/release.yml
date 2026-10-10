@@ -1,0 +1,125 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.release-trigger/0.0.1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  VERSION: '0.0.1'
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if gh release view "v${VERSION}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release v${VERSION} already exists; reusing it."
+          else
+            gh release create "v${VERSION}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --target "${GITHUB_SHA}" \
+              --title "v${VERSION}" \
+              --notes "Initial test release of the Qoder provider plugin for CLIProxyAPI." \
+              --draft
+          fi
+
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            ext: so
+          - os: macos-latest
+            goos: darwin
+            ext: dylib
+          - os: windows-latest
+            goos: windows
+            ext: dll
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache: false
+      - name: Download dependencies
+        run: go mod download github.com/steamwo/qoder-proxy
+      - name: Test
+        run: go test ./...
+      - name: Build and package
+        id: package
+        shell: bash
+        env:
+          GOOS_NAME: ${{ matrix.goos }}
+          EXT: ${{ matrix.ext }}
+        run: |
+          ARCH="$(go env GOARCH)"
+          LIB="qoder.${EXT}"
+          ASSET="qoder_${VERSION}_${GOOS_NAME}_${ARCH}.zip"
+          CGO_ENABLED=1 go build -trimpath -buildmode=c-shared -o "${LIB}" .
+          rm -f qoder.h
+          python - "${ASSET}" "${LIB}" <<'PY'
+          import sys
+          import zipfile
+
+          archive, library = sys.argv[1], sys.argv[2]
+          with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+              zf.write(library, arcname=library)
+          PY
+          echo "asset=${ASSET}" >> "${GITHUB_OUTPUT}"
+      - name: Upload directly to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release upload "v${VERSION}" "${{ steps.package.outputs.asset }}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --clobber
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release ZIPs and create checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          mkdir release-assets
+          gh release download "v${VERSION}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pattern "qoder_${VERSION}_*.zip" \
+            --dir release-assets
+          cd release-assets
+          count="$(find . -maxdepth 1 -type f -name "qoder_${VERSION}_*.zip" | wc -l | tr -d ' ')"
+          if [ "${count}" -lt 3 ]; then
+            echo "Expected at least 3 platform archives, found ${count}." >&2
+            exit 1
+          fi
+          sha256sum qoder_${VERSION}_*.zip > checksums.txt
+      - name: Upload checksums and publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release upload "v${VERSION}" release-assets/checksums.txt \
+            --repo "${GITHUB_REPOSITORY}" \
+            --clobber
+          gh release edit "v${VERSION}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --draft=false \
+            --prerelease=false
