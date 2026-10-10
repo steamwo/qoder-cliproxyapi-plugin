@@ -1,0 +1,38 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            ext: so
+          - os: macos-latest
+            goos: darwin
+            ext: dylib
+          - os: windows-latest
+            goos: windows
+            ext: dll
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache: true
+      - name: Test
+        run: go test ./...
+      # Build only for verification. Do not upload/archive build outputs.
+      - name: Build shared library
+        shell: bash
+        run: |
+          mkdir -p dist/${{ matrix.goos }}/$(go env GOARCH)
+          CGO_ENABLED=1 go build -trimpath -buildmode=c-shared -o dist/${{ matrix.goos }}/$(go env GOARCH)/qoder.${{ matrix.ext }} .
+          rm -f dist/${{ matrix.goos }}/$(go env GOARCH)/qoder.h
